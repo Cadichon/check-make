@@ -1,2 +1,4 @@
+checkmake
+*.o
 checkmake.dSYM
 *~
