@@ -1,9 +1,5 @@
-##
-## EPITECH PROJECT, 2018
-## FTP
-## File description:
-## FTP Makefile
-##
+
+## Commentary (for testing purpose)
 
 SRC		:=	$(addprefix ./src/, \
 			main.cpp \
