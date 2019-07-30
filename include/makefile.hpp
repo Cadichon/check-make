@@ -22,11 +22,12 @@ public:
   ~Makefile() = default;
   const std::string getMakefile() const;
   const std::string getVariables() const;
+  const std::string getRules() const;
 private:
   struct Rule {
     std::string target;
-    std::string dependences;
-    std::list<std::string> commandes; 
+    std::string deps;
+    std::list<std::string> cmds; 
   };
   bool _isVariable(const std::string &line);
   bool _isRuleTarget(const std::string &line);
