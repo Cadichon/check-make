@@ -29,9 +29,10 @@ private:
     std::string deps;
     std::list<std::string> cmds; 
   };
-  bool _isVariable(const std::string &line);
-  bool _isRuleTarget(const std::string &line);
-  void _removeUselessLine();
+  bool _isVariable(const std::string &line) const;
+  bool _isRuleTarget(const std::string &line) const;
+  bool _isRuleCommand(const std::string &line) const;
+  void _cleanMakefile();
   void _extractVariables();
   void _extractRules();
   std::string _makefilePath;

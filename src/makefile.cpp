@@ -13,7 +13,7 @@ Makefile::Makefile(const std::string &makefilePath) : _makefilePath(makefilePath
   while (std::getline(file, line)) {
     this->_makefile.push_back(line);
   }
-  this->_removeUselessLine();
+  this->_cleanMakefile();
 #ifdef __DEBUG_MAKEFILE
   std::cout << "=== Makefile clean begin ===" << std::endl;
   std::cout << this->getMakefile() << std::endl;
@@ -35,32 +35,42 @@ Makefile::Makefile(const std::string &makefilePath) : _makefilePath(makefilePath
 #endif
 }
 
-bool Makefile::_isVariable(const std::string &line)
+bool Makefile::_isVariable(const std::string &line) const
 {
-  int found = line.find_first_of("=:");
+  int found = line.find_first_of("=:+");
 
   if (found < 0)
+    return false;
+  if (line[found] == '+')
     return false;
   return line[found] == '=' || (line[found] == ':' && line[found + 1] == '=');
 }
 
-bool Makefile::_isRuleTarget(const std::string &line)
+bool Makefile::_isRuleTarget(const std::string &line) const
 {
-  int foundDot = line.find_first_of(":");
-  int foundEqual = line.find_first_of("=");
+  int found = line.find_first_of("=:");
   
   if (this->_isVariable(line))
     return false;
-  if (foundDot < 0)
-    return false;
-  if (foundEqual > 0 && foundEqual < foundDot)
-    return false;
-  if (!line.compare(0, 6, ".PHONY"))
+  if (line[found] != ':')
     return false;
   return true;
 }
 
-void Makefile::_removeUselessLine() {
+bool Makefile::_isRuleCommand(const std::string &line) const
+{
+  std::string recipePrefix;
+
+  try {
+    recipePrefix = this->_variables.at(".RECIPEPREFIX");
+  }
+  catch (std::out_of_range) {
+    recipePrefix = "\t";
+  }
+  return starts_with(line, recipePrefix);
+}
+
+void Makefile::_cleanMakefile() {
   std::string reconstituedLine;
   std::list<std::string> lineToReconstituate;
   bool previousLineIsBackslashEnded = false;
@@ -86,12 +96,8 @@ void Makefile::_removeUselessLine() {
 	reconstituedLine += lineToReconstituate.front();
 	lineToReconstituate.pop_front();
       }
-      epur(reconstituedLine);
       std::replace(it, std::next(it), line, reconstituedLine);
       previousLineIsBackslashEnded = false;
-    }
-    else if (!ends_with(line, "\\")) {
-      epur(line);
     }
     it++;
   }
@@ -101,19 +107,19 @@ void Makefile::_extractVariables()
 {
   for (auto it = this->_makefile.begin(); it != this->_makefile.end(); it++) {
     std::string &line = *it;
-    int found = line.find_first_of("=:");
 
-    if (found < 0)
-      continue;
     if (this->_isVariable(line)) {
+      int found = line.find_first_of("=:");
       std::string name;
       std::string content;
       int equalPos = (line[found] == '=' ? found : found + 1);
       
       std::copy(line.begin(), line.begin() + found, std::back_inserter(name));
       epur(name);
-      std::copy(line.begin() + equalPos + 1, line.end(), std::back_inserter(content));
-      epur(content);
+      if (line.begin() + equalPos + 1 != line.end()) {
+	std::copy(line.begin() + equalPos + 1, line.end(), std::back_inserter(content));
+	epur(content);
+      }
       this->_variables[name] = content;
     }
   }
@@ -124,35 +130,44 @@ void Makefile::_extractRules()
   auto it = this->_makefile.begin();
   
   while (it != this->_makefile.end()) {
-    if (starts_with(*it, ".PHONY")) {
-      it++;
-      continue;
-    }
     if (this->_isRuleTarget(*it)) {
-      std::string firstLine = *it;
-      int found = firstLine.find_first_of(":");
-      std::string deps;
-      std::list<std::string> commands;
+      int foundColon = it->find(":");
+      int foundSemicolon = it->find(";");
       Rule rule;
       
-      std::copy(firstLine.begin(), firstLine.begin() + found, std::back_inserter(rule.target));
-      epur(rule.target);      
-      if (firstLine.begin() + found + 1 != firstLine.end()) {
-	std::copy(firstLine.begin() + found + 1, firstLine.end(), std::back_inserter(rule.deps));
+      std::copy(it->begin(), it->begin() + foundColon, std::back_inserter(rule.target));
+      epur(rule.target);
+      if (it->begin() + foundColon + 1 != it->end()) {
+	if (foundSemicolon != -1) {
+	  std::copy(it->begin() + foundColon + 1, 
+		    it->begin() + foundSemicolon, 
+		    std::back_inserter(rule.deps));
+	}
+	else
+	  std::copy(it->begin() + foundColon + 1, it->end() , std::back_inserter(rule.deps));
 	epur(rule.deps);
       }
-      if (!this->_isRuleTarget(*(std::next(it)))) {
+      if (foundSemicolon != -1) {
+	std::string firstCommand;
+
+	std::copy(it->begin() + foundSemicolon + 1, it->end(), std::back_inserter(firstCommand));
+	rule.cmds.push_back(firstCommand);
+	epur(rule.cmds.back());
+      }
+      if (std::next(it) != this->_makefile.end() && this->_isRuleCommand(*std::next(it))) {
 	it++;
-	while (!this->_isRuleTarget(*it) && !starts_with(*it, ".PHONY")) {
-	  commands.push_back(*it);
+	while (this->_isRuleCommand(*it)) {
+	  rule.cmds.push_back(*it);
+	  epur(rule.cmds.back());
 	  it++;
 	}
-	it--;
-	rule.cmds = commands;
       }
+      else
+	it++;
       this->_rules.push_back(rule);
     }
-    it++;
+    else
+      it++;
   }
 }
 
@@ -191,7 +206,7 @@ const std::string Makefile::getRules() const
     if (!it->cmds.empty()) {
       out += "\ncommands:\n";
       for (auto it2 = it->cmds.begin(); it2 != it->cmds.end(); it2++) {
-	out += ("\t" + *it2);
+	out += (" - '" + *it2 + "'");
 	if (std::next(it2) != it->cmds.end())
 	  out += "\n";
       }
