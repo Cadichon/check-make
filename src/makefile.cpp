@@ -105,23 +105,22 @@ void Makefile::_cleanMakefile() {
 
 void Makefile::_extractVariables()
 {
-  for (auto it = this->_makefile.begin(); it != this->_makefile.end(); it++) {
+  auto it = this->_makefile.begin();
+
+  while (it != this->_makefile.end()) {
     std::string &line = *it;
 
     if (this->_isVariable(line)) {
       int found = line.find_first_of("=:");
-      std::string name;
-      std::string content;
       int equalPos = (line[found] == '=' ? found : found + 1);
-      
-      std::copy(line.begin(), line.begin() + found, std::back_inserter(name));
+      std::string name(line, 0, found);
+      std::string content(line, equalPos + 1);
+
       epur(name);
-      if (line.begin() + equalPos + 1 != line.end()) {
-	std::copy(line.begin() + equalPos + 1, line.end(), std::back_inserter(content));
-	epur(content);
-      }
+      epur(content);
       this->_variables[name] = content;
     }
+    it++;
   }
 }
 
@@ -135,23 +134,17 @@ void Makefile::_extractRules()
       int foundSemicolon = it->find(";");
       Rule rule;
       
-      std::copy(it->begin(), it->begin() + foundColon, std::back_inserter(rule.target));
+      rule.target = std::string(*it, 0, foundColon);
       epur(rule.target);
       if (it->begin() + foundColon + 1 != it->end()) {
-	if (foundSemicolon != -1) {
-	  std::copy(it->begin() + foundColon + 1, 
-		    it->begin() + foundSemicolon, 
-		    std::back_inserter(rule.deps));
-	}
+	if (foundSemicolon != -1)
+	  rule.deps = std::string(*it, foundColon + 1, foundSemicolon - foundColon - 1);
 	else
-	  std::copy(it->begin() + foundColon + 1, it->end() , std::back_inserter(rule.deps));
+	  rule.deps = std::string(*it, foundColon + 1);
 	epur(rule.deps);
       }
       if (foundSemicolon != -1) {
-	std::string firstCommand;
-
-	std::copy(it->begin() + foundSemicolon + 1, it->end(), std::back_inserter(firstCommand));
-	rule.cmds.push_back(firstCommand);
+	rule.cmds.push_back(std::string(*it, foundSemicolon + 1));
 	epur(rule.cmds.back());
       }
       if (std::next(it) != this->_makefile.end() && this->_isRuleCommand(*std::next(it))) {
@@ -161,13 +154,11 @@ void Makefile::_extractRules()
 	  epur(rule.cmds.back());
 	  it++;
 	}
+	it--;
       }
-      else
-	it++;
       this->_rules.push_back(rule);
     }
-    else
-      it++;
+    it++;
   }
 }
 
