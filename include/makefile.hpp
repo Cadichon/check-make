@@ -1,9 +1,11 @@
+#ifndef __MAKEFILE_HPP_
+#define __MAKEFILE_HPP_
+
 #include <string>
-#include <vector>
 #include <fstream>
 #include <exception>
+#include <map>
 #include <list>
-#include "json.hpp"
 
 class MakefileException : public std::exception {
 public:
@@ -45,3 +47,5 @@ private:
   std::list<std::string> _makefile;
   std::string _phony;
 };
+
+#endif

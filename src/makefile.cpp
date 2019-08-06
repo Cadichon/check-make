@@ -13,6 +13,7 @@ Makefile::Makefile(const std::string &makefilePath, bool verbose) : _makefilePat
   while (std::getline(file, line)) {
     this->_makefile.push_back(line);
   }
+
   this->_cleanMakefile();
   this->_extractVariables();
   this->_extractVariableModifiers();

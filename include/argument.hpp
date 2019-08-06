@@ -1,5 +1,5 @@
-#ifndef ARG_HPP
-#define ARG_HPP
+#ifndef __ARG_HPP
+#define __ARG_HPP
 
 class Argument {
 public:

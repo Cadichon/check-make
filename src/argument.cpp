@@ -14,7 +14,7 @@ static const option long_opts[] = {
 
 static const char *short_opts = "m:r:Rvh";
 
-Argument::Argument(char argc, char **argv) : _isGood(true), _recursive(false), _verbose(false), _makefilePath("./Makefile"), _rulesPath("./RULES")
+Argument::Argument(char argc, char **argv) : _isGood(true), _recursive(false), _verbose(false), _makefilePath("./Makefile"), _rulesPath("./rules.json")
 {
   int opt;
   
