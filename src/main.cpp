@@ -14,7 +14,7 @@ int main(int argc, char **argv)
     std::cout << "Recursive is " << (arg.isRecursive() ? "on" : "off") << std::endl;
     std::cout << "Verbose is " << (arg.isVerbose() ? "on" : "off") << std::endl;
   }
-  Makefile makefile(arg.getMakefilePath());
+  Makefile makefile(arg.getMakefilePath(), arg.isVerbose());
 
   return (0);
 }

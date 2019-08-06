@@ -2,7 +2,7 @@
 #include "utils.hpp"
 #include <iostream>
 
-Makefile::Makefile(const std::string &makefilePath) : _makefilePath(makefilePath)
+Makefile::Makefile(const std::string &makefilePath, bool verbose) : _makefilePath(makefilePath), _verbose(verbose)
 {
   std::string line;
   std::ifstream file(makefilePath);
@@ -14,31 +14,31 @@ Makefile::Makefile(const std::string &makefilePath) : _makefilePath(makefilePath
     this->_makefile.push_back(line);
   }
   this->_cleanMakefile();
-#ifdef __DEBUG_MAKEFILE
-  std::cout << "=== Makefile clean begin ===" << std::endl;
-  std::cout << this->getMakefile() << std::endl;
-  std::cout << "=== Makefile clean end ===" << std::endl;
-#endif
-
   this->_extractVariables();
-#ifdef __DEBUG_MAKEFILE
-  std::cout << "=== Makefile variable begin ===" << std::endl;
-  std::cout << this->getVariables() << std::endl;
-  std::cout << "=== Makefile variable end ===" << std::endl;
-#endif
- 
+  this->_extractVariableModifiers();
   this->_extractRules();
-#ifdef __DEBUG_MAKEFILE
-  std::cout << "=== Makefile rules begin ===" << std::endl;
-  std::cout << this->getRules() << std::endl;
-  std::cout << "=== Makefile rules end ===" << std::endl;
-#endif
+  this->_extractPhony();
+  if (this->_verbose) {
+    std::cout << "=== Makefile variable begin ===" << std::endl;
+    std::cout << this->getVariables() << std::endl;
+    std::cout << "=== Makefile variable end ===" << std::endl;
+    std::cout << "=== Makefile rules begin ===" << std::endl;
+    std::cout << this->getRules() << std::endl;
+    std::cout << "=== Makefile rules end ===" << std::endl;
+    if (!this->_phony.empty()) {
+      std::cout << "=== Makefile .PHONY begin ===" << std::endl;
+      std::cout << this->_phony << std::endl;
+      std::cout << "=== Makefile .PHONY end ===" << std::endl;
+    }
+  }
 }
 
 bool Makefile::_isVariable(const std::string &line) const
 {
   int found = line.find_first_of("=:+");
 
+  if (this->_isRuleCommand(line))
+    return false;
   if (found < 0)
     return false;
   if (line[found] == '+')
@@ -46,10 +46,24 @@ bool Makefile::_isVariable(const std::string &line) const
   return line[found] == '=' || (line[found] == ':' && line[found + 1] == '=');
 }
 
+bool Makefile::_isVariableModifier(const std::string &line) const 
+{
+  int found = line.find("+=");
+  int foundFirst = line.find_first_of("=:");
+
+  if (this->_isRuleCommand(line))
+    return false;
+  if (found < 0)
+    return false;
+  if (line[foundFirst] == ':')
+    return false;
+  return true;
+}
+
 bool Makefile::_isRuleTarget(const std::string &line) const
 {
   int found = line.find_first_of("=:");
-  
+
   if (this->_isVariable(line))
     return false;
   if (line[found] != ':')
@@ -105,11 +119,7 @@ void Makefile::_cleanMakefile() {
 
 void Makefile::_extractVariables()
 {
-  auto it = this->_makefile.begin();
-
-  while (it != this->_makefile.end()) {
-    std::string &line = *it;
-
+  for (const std::string &line: this->_makefile) {
     if (this->_isVariable(line)) {
       int found = line.find_first_of("=:");
       int equalPos = (line[found] == '=' ? found : found + 1);
@@ -120,15 +130,29 @@ void Makefile::_extractVariables()
       epur(content);
       this->_variables[name] = content;
     }
-    it++;
   }
 }
 
+void Makefile::_extractVariableModifiers()
+{
+  for (const std::string &line: this->_makefile) {
+    if (this->_isVariableModifier(line)) {
+      int found = line.find("+=");
+      int equalPos = found + 1;
+      std::string name(line, 0, found);
+      std::string addedContent(line, equalPos + 1);
+
+      epur(name);
+      epur(addedContent);
+      this->_variables[name] += addedContent;
+    }
+  }
+}
+
+
 void Makefile::_extractRules()
 {
-  auto it = this->_makefile.begin();
-  
-  while (it != this->_makefile.end()) {
+  for (auto it = this->_makefile.begin(); it != this->_makefile.end(); it++) {
     if (this->_isRuleTarget(*it)) {
       int foundColon = it->find(":");
       int foundSemicolon = it->find(";");
@@ -158,8 +182,17 @@ void Makefile::_extractRules()
       }
       this->_rules.push_back(rule);
     }
-    it++;
   }
+}
+
+void Makefile::_extractPhony()
+{
+  auto phony = std::find_if(this->_rules.begin(), this->_rules.end(), [](const Rule &r) -> bool { return r.target == ".PHONY";});
+
+  if (phony == this->_rules.end() && phony->target != ".PHONY")
+    return;
+  this->_phony = phony->deps;
+  erase(this->_rules, phony);
 }
 
 const std::string Makefile::getMakefile() const

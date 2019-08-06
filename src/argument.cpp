@@ -8,35 +8,37 @@ static const option long_opts[] = {
   {"rules", required_argument, nullptr, 'r'},
   {"recursive", no_argument, nullptr, 'R'},
   {"verbose", no_argument, nullptr, 'v'},
+  {"help", no_argument, nullptr, 'h'},
   {nullptr, no_argument, nullptr, 0}
 };
 
-static const char *short_opts = "m:r:Rv";
+static const char *short_opts = "m:r:Rvh";
 
 Argument::Argument(char argc, char **argv) : _isGood(true), _recursive(false), _verbose(false), _makefilePath("./Makefile"), _rulesPath("./RULES")
 {
   int opt;
-
+  
   while ((opt = getopt_long(argc, argv, short_opts, long_opts, nullptr)) != -1) {
     switch (opt) {
-      case 'm':
-	this->_makefilePath = optarg;
-	break;
-      case 'r':
-	this->_rulesPath = optarg;
-	break;
-      case 'R':
-	this->_recursive = true;
-	break;
-      case 'v':
-	this->_verbose = true;
-	break;
-      default:
-	std::cout << "usage: " << std::endl;
-	std::cout << "\t" << argv[0] << " [-m|--makefile m-path] [-r|--rules r-path] [-v|--verbose] [-R|--recursive]" << std::endl;
-	std::cout << "\t\t" << "m-path: path to a makefile (default to \"./Makefile\")" << std::endl;
-	std::cout << "\t\t" << "m-path: path to a RULES config file (default to \"./RULES\")" << std::endl;
-	this->_isGood = false;
+    case 'm':
+      this->_makefilePath = optarg;
+      break;
+    case 'r':
+      this->_rulesPath = optarg;
+      break;
+    case 'R':
+      this->_recursive = true;
+      break;
+    case 'v':
+      this->_verbose = true;
+      break;
+    case 'h':
+    default:
+      std::cout << "usage: " << std::endl;
+      std::cout << "\t" << argv[0] << " [-m|--makefile m-path] [-r|--rules r-path] [-v|--verbose] [-R|--recursive]" << std::endl;
+      std::cout << "\t\t" << "m-path: path to a makefile (default to \"./Makefile\")" << std::endl;
+      std::cout << "\t\t" << "m-path: path to a RULES config file (default to \"./RULES\")" << std::endl;
+      this->_isGood = false;
     }
   }
 }
