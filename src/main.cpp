@@ -1,6 +1,7 @@
 #include <iostream>
 #include "argument.hpp"
 #include "makefile.hpp"
+#include "rules.hpp"
 
 int main(int argc, char **argv)
 {
@@ -15,6 +16,7 @@ int main(int argc, char **argv)
     std::cout << "Verbose is " << (arg.isVerbose() ? "on" : "off") << std::endl;
   }
   Makefile makefile(arg.getMakefilePath(), arg.isVerbose());
+  Rules rules(arg.getRulesPath(), arg.isVerbose());
 
-  return (0);
+  return rules.check(makefile);
 }

@@ -4,7 +4,8 @@
 SRC		:=	$(addprefix ./src/, \
 			main.cpp \
 			argument.cpp \
-			makefile.cpp)
+			makefile.cpp \
+			rules.cpp)
 
 OBJ		=	$(SRC:.cpp=.o)
 

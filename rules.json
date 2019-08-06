@@ -1,0 +1,10 @@
+{
+    "include": {
+	"rules": [],
+	"variables": []
+    },
+    "exclude": {
+	"rules": [],
+	"variables": []
+    }
+}

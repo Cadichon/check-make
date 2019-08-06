@@ -1,6 +1,4 @@
 #include "makefile.hpp"
-#include "utils.hpp"
-#include <iostream>
 
 Makefile::Makefile(const std::string &makefilePath, bool verbose) : _makefilePath(makefilePath), _verbose(verbose)
 {

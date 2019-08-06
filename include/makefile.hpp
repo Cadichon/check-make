@@ -2,10 +2,12 @@
 #define __MAKEFILE_HPP_
 
 #include <string>
+#include <iostream>
 #include <fstream>
 #include <exception>
 #include <map>
 #include <list>
+#include "utils.hpp"
 
 class MakefileException : public std::exception {
 public:
