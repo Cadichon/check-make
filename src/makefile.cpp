@@ -72,12 +72,13 @@ bool Makefile::_isReceipeTarget(const std::string &line) const
 
 bool Makefile::_isReceipeCommand(const std::string &line) const
 {
+  auto found = this->_variables.find(".RECIPEPREFIX");
   std::string recipePrefix;
 
-  try {
+  if (found != this->_variables.end()) {
     recipePrefix = this->_variables.at(".RECIPEPREFIX");
   }
-  catch (const std::out_of_range &e) {
+  else {
     recipePrefix = "\t";
   }
   return starts_with(line, recipePrefix);
@@ -160,24 +161,25 @@ void Makefile::_extractReceipes()
       receipe.target = std::string(*it, 0, foundColon);
       epur(receipe.target);
       if (it->begin() + foundColon + 1 != it->end()) {
-	if (foundSemicolon != -1)
-	  receipe.deps = std::string(*it, foundColon + 1, foundSemicolon - foundColon - 1);
-	else
-	  receipe.deps = std::string(*it, foundColon + 1);
-	epur(receipe.deps);
+        if (foundSemicolon != -1)
+          receipe.deps = std::string(*it, foundColon + 1, foundSemicolon - foundColon - 1);
+        else {
+          receipe.deps = std::string(*it, foundColon + 1);
+        }
+        epur(receipe.deps);
       }
       if (foundSemicolon != -1) {
-	receipe.cmds.push_back(std::string(*it, foundSemicolon + 1));
-	epur(receipe.cmds.back());
+        receipe.cmds.push_back(std::string(*it, foundSemicolon + 1));
+        epur(receipe.cmds.back());
       }
-      if (std::next(it) != this->_makefile.end() && this->_isReceipeCommand(*std::next(it))) {
-	it++;
-	while (this->_isReceipeCommand(*it)) {
-	  receipe.cmds.push_back(*it);
-	  epur(receipe.cmds.back());
-	  it++;
-	}
-	it--;
+      if (std::next(it) != this->_makefile.end() && this->_isReceipeCommand(*(std::next(it)))) {
+        it++;
+        while (it != this->_makefile.end() && this->_isReceipeCommand(*it)) {
+          receipe.cmds.push_back(*it);
+          epur(receipe.cmds.back());
+          it++;
+        }
+        it--;
       }
       this->_receipes.push_back(receipe);
     }
