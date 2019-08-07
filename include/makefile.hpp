@@ -3,6 +3,7 @@
 
 #include <string>
 #include <iostream>
+#include <algorithm>
 #include <fstream>
 #include <exception>
 #include <map>
@@ -26,26 +27,26 @@ public:
   ~Makefile() = default;
   const std::string getMakefile() const;
   const std::string getVariables() const;
-  const std::string getRules() const;
+  const std::string getReceipes() const;
 private:
-  struct Rule {
+  struct Receipe {
     std::string target;
     std::string deps;
     std::list<std::string> cmds; 
   };
   bool _isVariable(const std::string &line) const;
   bool _isVariableModifier(const std::string &line) const;
-  bool _isRuleTarget(const std::string &line) const;
-  bool _isRuleCommand(const std::string &line) const;
+  bool _isReceipeTarget(const std::string &line) const;
+  bool _isReceipeCommand(const std::string &line) const;
   void _cleanMakefile();
   void _extractVariables();
   void _extractVariableModifiers();
-  void _extractRules();
+  void _extractReceipes();
   void _extractPhony();
   std::string _makefilePath;
   bool _verbose;
   std::map<std::string, std::string> _variables;
-  std::list<Rule> _rules; 
+  std::list<Receipe> _receipes;
   std::list<std::string> _makefile;
   std::string _phony;
 };

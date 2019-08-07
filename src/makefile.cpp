@@ -15,15 +15,15 @@ Makefile::Makefile(const std::string &makefilePath, bool verbose) : _makefilePat
   this->_cleanMakefile();
   this->_extractVariables();
   this->_extractVariableModifiers();
-  this->_extractRules();
+  this->_extractReceipes();
   this->_extractPhony();
   if (this->_verbose) {
     std::cout << "=== Makefile variable begin ===" << std::endl;
     std::cout << this->getVariables() << std::endl;
     std::cout << "=== Makefile variable end ===" << std::endl;
-    std::cout << "=== Makefile rules begin ===" << std::endl;
-    std::cout << this->getRules() << std::endl;
-    std::cout << "=== Makefile rules end ===" << std::endl;
+    std::cout << "=== Makefile receipes begin ===" << std::endl;
+    std::cout << this->getReceipes() << std::endl;
+    std::cout << "=== Makefile receipes end ===" << std::endl;
     if (!this->_phony.empty()) {
       std::cout << "=== Makefile .PHONY begin ===" << std::endl;
       std::cout << this->_phony << std::endl;
@@ -36,7 +36,7 @@ bool Makefile::_isVariable(const std::string &line) const
 {
   int found = line.find_first_of("=:+");
 
-  if (this->_isRuleCommand(line))
+  if (this->_isReceipeCommand(line))
     return false;
   if (found < 0)
     return false;
@@ -50,7 +50,7 @@ bool Makefile::_isVariableModifier(const std::string &line) const
   int found = line.find("+=");
   int foundFirst = line.find_first_of("=:");
 
-  if (this->_isRuleCommand(line))
+  if (this->_isReceipeCommand(line))
     return false;
   if (found < 0)
     return false;
@@ -59,7 +59,7 @@ bool Makefile::_isVariableModifier(const std::string &line) const
   return true;
 }
 
-bool Makefile::_isRuleTarget(const std::string &line) const
+bool Makefile::_isReceipeTarget(const std::string &line) const
 {
   int found = line.find_first_of("=:");
 
@@ -70,14 +70,14 @@ bool Makefile::_isRuleTarget(const std::string &line) const
   return true;
 }
 
-bool Makefile::_isRuleCommand(const std::string &line) const
+bool Makefile::_isReceipeCommand(const std::string &line) const
 {
   std::string recipePrefix;
 
   try {
     recipePrefix = this->_variables.at(".RECIPEPREFIX");
   }
-  catch (std::out_of_range) {
+  catch (const std::out_of_range &e) {
     recipePrefix = "\t";
   }
   return starts_with(line, recipePrefix);
@@ -149,49 +149,49 @@ void Makefile::_extractVariableModifiers()
 }
 
 
-void Makefile::_extractRules()
+void Makefile::_extractReceipes()
 {
   for (auto it = this->_makefile.begin(); it != this->_makefile.end(); it++) {
-    if (this->_isRuleTarget(*it)) {
+    if (this->_isReceipeTarget(*it)) {
       int foundColon = it->find(":");
       int foundSemicolon = it->find(";");
-      Rule rule;
+      Receipe receipe;
       
-      rule.target = std::string(*it, 0, foundColon);
-      epur(rule.target);
+      receipe.target = std::string(*it, 0, foundColon);
+      epur(receipe.target);
       if (it->begin() + foundColon + 1 != it->end()) {
 	if (foundSemicolon != -1)
-	  rule.deps = std::string(*it, foundColon + 1, foundSemicolon - foundColon - 1);
+	  receipe.deps = std::string(*it, foundColon + 1, foundSemicolon - foundColon - 1);
 	else
-	  rule.deps = std::string(*it, foundColon + 1);
-	epur(rule.deps);
+	  receipe.deps = std::string(*it, foundColon + 1);
+	epur(receipe.deps);
       }
       if (foundSemicolon != -1) {
-	rule.cmds.push_back(std::string(*it, foundSemicolon + 1));
-	epur(rule.cmds.back());
+	receipe.cmds.push_back(std::string(*it, foundSemicolon + 1));
+	epur(receipe.cmds.back());
       }
-      if (std::next(it) != this->_makefile.end() && this->_isRuleCommand(*std::next(it))) {
+      if (std::next(it) != this->_makefile.end() && this->_isReceipeCommand(*std::next(it))) {
 	it++;
-	while (this->_isRuleCommand(*it)) {
-	  rule.cmds.push_back(*it);
-	  epur(rule.cmds.back());
+	while (this->_isReceipeCommand(*it)) {
+	  receipe.cmds.push_back(*it);
+	  epur(receipe.cmds.back());
 	  it++;
 	}
 	it--;
       }
-      this->_rules.push_back(rule);
+      this->_receipes.push_back(receipe);
     }
   }
 }
 
 void Makefile::_extractPhony()
 {
-  auto phony = std::find_if(this->_rules.begin(), this->_rules.end(), [](const Rule &r) -> bool { return r.target == ".PHONY";});
+  auto phony = std::find_if(this->_receipes.begin(), this->_receipes.end(), [](const Receipe &r) -> bool { return r.target == ".PHONY";});
 
-  if (phony == this->_rules.end() && phony->target != ".PHONY")
+  if (phony == this->_receipes.end() && phony->target != ".PHONY")
     return;
   this->_phony = phony->deps;
-  erase(this->_rules, phony);
+  erase(this->_receipes, phony);
 }
 
 const std::string Makefile::getMakefile() const
@@ -218,11 +218,11 @@ const std::string Makefile::getVariables() const
   return out;
 }
 
-const std::string Makefile::getRules() const
+const std::string Makefile::getReceipes() const
 {
   std::string out;
 
-  for (auto it = this->_rules.begin(); it != this->_rules.end(); it++) {
+  for (auto it = this->_receipes.begin(); it != this->_receipes.end(); it++) {
     out += ("target = '" + it->target + "'");
     if (!it->deps.empty())
       out += ("\ndeps = '" + it->deps+ "'");
@@ -234,7 +234,7 @@ const std::string Makefile::getRules() const
 	  out += "\n";
       }
     }
-    if (std::next(it) != this->_rules.end())
+    if (std::next(it) != this->_receipes.end())
       out += "\n\n";
   }
   return out;
